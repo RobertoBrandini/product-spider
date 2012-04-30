@@ -8,7 +8,7 @@ import pg
 parse_html = True
 collected = 0
 start_page = 1
-last_page = 3
+last_page = 100
 
 conn = pg.connect('itemcase', '50.116.1.34', 5432, None, None, 'postgres', 'fastMoving2BreakEverything')
 pgqueryobject = conn.query('SELECT cid_product FROM product')
