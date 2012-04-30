@@ -23,12 +23,15 @@ if parse_html:
         s = f.read().decode('UTF-8')
         parser = GPSProductListParser()
         parser.feed(s)
+        cid = []
         for c in parser.cid:
+            cid.append(c)
             if not (c,) in result:
                 result.append((c,))
                 collected += 1
                 log.write(str(datetime.datetime.now()) + " - CID #" + c + " collected\n")
                 conn.query('INSERT INTO product VALUES(' + c + ', \'' + str(datetime.date.today()) + '\')')
+            print cid
         parser.close()    
     
     log.write(str(datetime.datetime.now()) + " - CID collection process finished\n")
