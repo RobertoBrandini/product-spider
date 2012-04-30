@@ -4,6 +4,8 @@ import datetime
 from pytz import timezone
 import urllib
 import pg
+import signal
+import sys
 
 parse_html = True
 collected = 0
@@ -15,6 +17,13 @@ pgqueryobject = conn.query('SELECT cid_product FROM product')
 result = pgqueryobject.getresult()
 
 log = open(log_output_file, 'a')
+
+
+def signal_handler(signal, frame):
+    log.write(str(datetime.datetime.now(timezone('UTC'))) + " - CID collection process aborted\n")
+    sys.exit(0)
+    
+signal.signal(signal.SIGINT, signal_handler)
 
 if parse_html:
     log.write(str(datetime.datetime.now(timezone('UTC'))) + " - CID collection process started for " + str(last_page - start_page) + ' pages\n')
@@ -37,10 +46,8 @@ if parse_html:
                     log.write(str(datetime.datetime.now(timezone('UTC'))) + " - CID #" + c + " collected\n")
                     conn.query('INSERT INTO product VALUES(' + c + ', \'' + str(datetime.date.today()) + '\')')
             parser.close()
-    except:
-            print "Except"
-    finally:    
         log.write(str(datetime.datetime.now(timezone('UTC'))) + " - CID collection process finished\n")
+    finally:        
         log.write(str(datetime.datetime.now(timezone('UTC'))) + " - " + str(collected) + " new CIDs was collected\n")
 
 log.close()

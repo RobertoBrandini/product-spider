@@ -16,4 +16,4 @@ def mount_gps_search_url(query, page):
         'tbm': 'shop',
         'start': page*10-10
     })
-    return curl_files[1] + '?url=%s' % ('https://www.google.com/search?' + gps_search_param).encode('base64', 'strict')
+    return curl_files[2] + '?url=%s' % ('https://www.google.com/search?' + gps_search_param).encode('base64', 'strict')
