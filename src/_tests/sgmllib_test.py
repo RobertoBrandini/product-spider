@@ -79,7 +79,7 @@ p = urllib.urlencode({
 
 p = 'https://www.google.com/search?' + p
 
-f = urllib.urlopen('http://localhost/curl.php?url=%s' % p.encode('base64', 'strict'))
+f = urllib.urlopen('http://50.116.1.34/spider/curl.php?url=%s' % p.encode('base64', 'strict'))
 s = f.read().decode()
 
 parser = SpiderParser()

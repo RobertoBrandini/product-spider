@@ -1,9 +1,8 @@
 <?php
 
-# getURL Example
-//getURL("http://shop.ebay.com/allcategories/all-categories", "proxy.tre-se.gov.br:3128");
-
-//getURL("http://www.extra.com.br/Informatica/Notebook/?Filtro=C56_C57&paginaAtual=1&numPorPagina=400", null);
+# Ex:
+# getURL("http://shop.ebay.com/allcategories/all-categories", "proxy.tre-se.gov.br:3128");
+# getURL("http://www.extra.com.br/Informatica/Notebook/?Filtro=C56_C57&paginaAtual=1&numPorPagina=400", null);
 
 function getURL($targetUrl, $proxy = null) {
 	$userAgent = 'Googlebot/2.1 (http://www.googlebot.com/bot.html)';
@@ -11,7 +10,7 @@ function getURL($targetUrl, $proxy = null) {
 	$ch = curl_init();
 	if ($proxy != null)
 		curl_setopt($ch, CURLOPT_PROXY, $proxy);
-//        curl_setopt($ch, CURLOPT_PROXY, "proxy.tre-se.gov.br:3128");
+        curl_setopt($ch, CURLOPT_PROXY, "proxy.tre-se.gov.br:3128");
 	curl_setopt($ch, CURLOPT_USERAGENT, $userAgent);
 	curl_setopt($ch, CURLOPT_URL, $targetUrl);
 	curl_setopt($ch, CURLOPT_FAILONERROR, true);
