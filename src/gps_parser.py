@@ -11,6 +11,9 @@ class GPSProductListParser(HTMLParser):
         self.wrapDivLevel = 0
         self.currentP = 0
         self.cid = []
+        self.pages = 0;
+        self.inPagesForm = False;
+        self.inPagesDiv = False;
     
     # return True when the parser is inside the product list wrap
     def isInWrap(self):
@@ -21,7 +24,7 @@ class GPSProductListParser(HTMLParser):
         # ajusts the wrap div level
         if tag == 'div' and attrs and attrs[0][0] == 'id' and attrs[0][1] in ['res', 'ires']:
             self.inWrap[attrs[0][1]] = True
-            self.wrapDivLevel += 1        
+            self.wrapDivLevel += 1
         # sets inP to True when the parser enters in a product div
         elif tag == 'li' and attrs and attrs[0][0] == 'class' and attrs[0][1] == 'g':
             self.inP = True        
@@ -34,7 +37,15 @@ class GPSProductListParser(HTMLParser):
         # ajusts the wrap div level
         elif tag == 'div' and self.isInWrap():
             self.wrapDivLevel += 1
-        
+        elif tag == 'div' and attrs and attrs[0][0] == 'id' and attrs[0][1] == 'subform_ctrl':
+            self.inPagesForm = True
+        elif tag == 'div' and self.inPagesForm and len(attrs) == 0:
+            self.inPagesDiv = True
+    
+    def handle_data(self, data):
+        if self.inPagesDiv:
+            self.pages = int(data.split(" ")[1].replace(",", ""))
+    
     def handle_endtag(self, tag):
         # ajusts the wrap div level
         if tag == 'div' and self.isInWrap():
@@ -45,3 +56,6 @@ class GPSProductListParser(HTMLParser):
         # sets the inPTit to False when the parser leaves a product title div
         elif tag == 'h3' and self.inPTit:
             self.inPTit = False
+        elif tag == 'div' and self.inPagesDiv:
+            self.inPagesDiv = False
+            self.inPagesForm = False
