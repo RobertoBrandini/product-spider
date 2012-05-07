@@ -11,7 +11,7 @@ class GPSProductListParser(HTMLParser):
         self.wrapDivLevel = 0
         self.currentP = 0
         self.cid = []
-        self.pages = 0;
+        self.total_results = 0;
         self.inPagesForm = False;
         self.inPagesDiv = False;
     
@@ -44,7 +44,7 @@ class GPSProductListParser(HTMLParser):
     
     def handle_data(self, data):
         if self.inPagesDiv:
-            self.pages = int(data.split(" ")[1].replace(",", ""))
+            self.total_results = int(data.split(" ")[1].replace(",", ""))
     
     def handle_endtag(self, tag):
         # ajusts the wrap div level
