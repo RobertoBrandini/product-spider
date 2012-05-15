@@ -11,16 +11,18 @@ import base64
 import atexit
 import urllib
 import math
+import os
 
 class CIDSpider:
     "CID Spider"
+    
     query = 'laptop'
     total_results = 0
     price_limit = 10000
     intervals = [[] for row in range(price_limit)]
     current = 1
     upper_limit = 980
-    lower_limit = 900
+    lower_limit = 300
     c_index = 0
     
     def __init__(self):
@@ -33,22 +35,27 @@ class CIDSpider:
         self.total_new_collected = 0        
         self.collected = self.get_collected_cids()
         
-        r = self.crawl_page(self.query, 1)        
+        r = self.crawl_page(self.query, 1)
         self.intervals[self.current].append((self.price_limit, r.total_results))
         
         while self.current <= self.price_limit:
             (s_price, e_price, results) = self.get_next_price_interval()
             self.process_query(self.query, 1, int(math.ceil(results/10)), s_price, e_price)
         
+        self.log("At this moment, the database contains " + str(len(self.collected)) + " unique CIDs.")
+    
     def __destructor__(self):
         self.log_f.close()
     
-    def log(self, s):
-        print s
-        self.log_f.write(s + '\n')
+    def log(self, m):
+        m = str(datetime.datetime.now(timezone('UTC'))).split('.')[0] + " (UTC): " + m
+        print m
+        self.log_f.write(m + '\n')
+        self.log_f.flush()
+        os.fsync(self.log_f.fileno())
     
     def quit_signal_handler(self, signal, frame):
-        self.log(str(datetime.datetime.now(timezone('UTC'))) + ": CID collection process aborted.")
+        self.log("CID collection process aborted.")
         sys.exit(0)
     
     def mount_url(self, query, page, c_index, tbs = ''):
@@ -77,14 +84,23 @@ class CIDSpider:
         break_point = s
         requests = 0
         
-        while total_results > self.upper_limit or total_results < self.lower_limit:
+        self.log("Initial price interval: " + str(s) + "-" + str(e) + " (" + str(total_results) + " results)")
+        
+        while total_results > self.upper_limit or total_results < self.lower_limit:            
             if total_results > self.upper_limit:
+                # se o intervalo não pode ser quebrado, termine
+                if (e - break_point) == 1:
+                    e = break_point
+                    break
+                
                 e_break = int((break_point + e)/2)
                 
                 r = self.crawl_page(self.query, 1, s, e_break)
                 
                 self.intervals[s].append((e_break, r.total_results))
                 self.intervals[e_break + 1].append((e, total_results - r.total_results))
+                
+                self.log("Break: " + str(s) + "-" + str(e) + " -> " + str(s) + "-" + str(e_break) + " (" + str(r.total_results) + " results)")
                 
                 e = e_break
                 total_results = r.total_results
@@ -96,8 +112,11 @@ class CIDSpider:
                     next_total_results = self.intervals[next_s][0][1]
                     
                     break_point = next_s
-                    e = next_e
                     total_results += next_total_results
+                    
+                    self.log("Join: " + str(s) + "-" + str(e) + " -> " + str(s) + "-" + str(next_e) + " (" + str(total_results) + " results)")
+                    
+                    e = next_e
                     
                     self.intervals[s].append((next_e, total_results))
                 else:
@@ -105,18 +124,18 @@ class CIDSpider:
                 
             e_index += 1
         
-        self.log(str(datetime.datetime.now(timezone('UTC'))) + ": " + str(requests) + " requests to define the interval.")
+        self.log(str(requests) + " requests were performed to define the filters.")
         
         r = (s, e, total_results)
         self.current = e + 1
         
         return r
-        
+    
     def process_query(self, query, s_page, e_page, s_price, e_price):
-        self.log(str(datetime.datetime.now(timezone('UTC'))) + ": CID collection process started." +
-            "Pages: " + str(e_page - s_page) + ". " + "Price Interval: " + str(s_price) + "-" + str(e_price) + ".")
+        self.log("CID collection process started (pages: " + str(e_page - s_page) + 
+                 ", p. interval: " + str(s_price) + "-" + str(e_price) + ").")
         
-        self.log(str(datetime.datetime.now(timezone('UTC'))) + ": Using bridge #" + str(self.c_index) + ".")
+        self.log("Using bridge #" + str(self.c_index) + ".")
         
         conn = pg.connect('itemcase', '50.116.1.34', 5432, None, None, 'postgres', 
                base64.decodestring('ZmFzdE1vdmluZzJCcmVha0V2ZXJ5dGhpbmc='))
@@ -131,9 +150,9 @@ class CIDSpider:
         
         conn.close()
         
-        self.log(str(datetime.datetime.now(timezone('UTC'))) + ": CID collection process finished.")            
-        self.log(str(datetime.datetime.now(timezone('UTC'))) + ": " + str(self.total_new_collected) + " new CIDs was collected.")
-
+        self.log("CID collection process finished.")            
+        self.log(str(self.total_new_collected) + " new CIDs have been collected so far.")
+    
     def crawl_page(self, query, page, s_price = 0, e_price = 0):
         crawled = False
         recovered = False
@@ -141,38 +160,36 @@ class CIDSpider:
         while not crawled:
             if self.c_index < len(c_files):
                 if recovered:
-                    self.log(str(datetime.datetime.now(timezone('UTC'))) + ": Using bridge #" + str(self.c_index) + ".")
+                    self.log("Using bridge #" + str(self.c_index) + ".")
                     
                 try:
                     if s_price == 0 or e_price == 0:
                         f = urllib.urlopen(self.mount_url(query, page, self.c_index))
                     else:
                         f = urllib.urlopen(self.mount_url(query, page, self.c_index,
-                            'cat:328,price:1,ppr_min:' + str(s_price) + ',ppr_max:' + str(e_price)))
-                except IOError as e:
-                    self.log(str(datetime.datetime.now(timezone('UTC'))) + ": Bridge #" + str(self.c_index) + " is offline.")                    
-                    self.c_index += 1
-                    recovered = True
-                    
-                try:
+                            'cat:328,price:1,ppr_min:' + str(s_price) + ',ppr_max:' + str(e_price)))                        
                     parser = GPSProductListParser()
                     parser.feed(f.read().decode('UTF-8'))
                     parser.close()
                     if len(parser.cid) == 0:
                         raise Exception(1, 'Request error')
-                    crawled = True
+                    crawled = True                        
+                except IOError as e:
+                    self.log("Bridge #" + str(self.c_index) + " is offline.")                    
+                    self.c_index += 1
+                    recovered = True
                 except Exception as e:
                     if e.args[0] == 1:
-                         self.log(str(datetime.datetime.now(timezone('UTC'))) + ": Bridge #" + str(self.c_index) + " has been blocked.")
+                         self.log("Bridge #" + str(self.c_index) + " has been blocked.")
                          self.c_index += 1
                          recovered = True
                     else:
-                         self.log(str(datetime.datetime.now(timezone('UTC'))) + ": " + str(e.args[0]) + ".")
+                         self.log(str(e.args[0]) + ".")
                          sys.exit()
             else:
-                self.log(str(datetime.datetime.now(timezone('UTC'))) + ": All bridges are blocked/offline.")
+                self.log("All bridges are blocked/offline.")
                 sys.exit()
                     
         return parser
-
+    
 cidSpider = CIDSpider()
