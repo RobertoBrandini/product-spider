@@ -1,7 +1,7 @@
 from HTMLParser import HTMLParser
 
-class GPSProductListParser(HTMLParser):
-    Name = "GPSProductListParser"
+class PIDParser(HTMLParser):
+    Name = "PIDParser"
     
     def __init__(self):
         HTMLParser.__init__(self)

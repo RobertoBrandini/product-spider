@@ -1,5 +1,5 @@
-from gps_parser import GPSProductListParser
-from gps_config import *
+from pidparser import PIDParser
+from config import *
 from pytz import timezone
 import datetime
 import urllib
@@ -13,8 +13,8 @@ import urllib
 import math
 import os
 
-class CIDSpider:
-    "CID Spider"
+class PIDSpider:
+    "PID Spider"
     
     query = 'laptop'
     total_results = 0
@@ -26,13 +26,12 @@ class CIDSpider:
     c_index = 0
     
     def __init__(self):
-        founded = 0
         self.log_f = open(log_output_file, 'a')
-        socket.setdefaulttimeout(10)
+        socket.setdefaulttimeout(20)
         signal.signal(signal.SIGINT, self.quit_signal_handler)
         atexit.register(self.__destructor__)
         
-        self.total_new_collected = 0        
+        self.total_new_collected = 0
         self.collected = self.get_collected_cids()
         
         r = self.crawl_page(self.query, 1)
@@ -88,12 +87,11 @@ class CIDSpider:
         
         while total_results > self.upper_limit or total_results < self.lower_limit:            
             if total_results > self.upper_limit:
-                # se o intervalo não pode ser quebrado, termine
                 if (e - break_point) == 1:
                     e = break_point
                     break
                 
-                e_break = int((break_point + e)/2)
+                e_break = int(round((break_point + e)/2))
                 
                 r = self.crawl_page(self.query, 1, s, e_break)
                 
@@ -132,7 +130,7 @@ class CIDSpider:
         return r
     
     def process_query(self, query, s_page, e_page, s_price, e_price):
-        self.log("CID collection process started (pages: " + str(e_page - s_page) + 
+        self.log("CID collection process started (pages: " + str(e_page - s_page + 1) + 
                  ", p. interval: " + str(s_price) + "-" + str(e_price) + ").")
         
         self.log("Using bridge #" + str(self.c_index) + ".")
@@ -140,7 +138,7 @@ class CIDSpider:
         conn = pg.connect('itemcase', '50.116.1.34', 5432, None, None, 'postgres', 
                base64.decodestring('ZmFzdE1vdmluZzJCcmVha0V2ZXJ5dGhpbmc='))
         
-        for i in range(s_page, e_page):
+        for i in range(s_page, e_page + 1):
             r = self.crawl_page(self.query, i, s_price, e_price)
             for c in r.cid:
                 if not (c,) in self.collected:
@@ -150,8 +148,8 @@ class CIDSpider:
         
         conn.close()
         
-        self.log("CID collection process finished.")            
-        self.log(str(self.total_new_collected) + " new CIDs have been collected so far.")
+        self.log("CID collection process finished.")
+        self.log(str(self.total_new_collected) + " new CIDs have been collected so far.\n")
     
     def crawl_page(self, query, page, s_price = 0, e_price = 0):
         crawled = False
@@ -168,7 +166,7 @@ class CIDSpider:
                     else:
                         f = urllib.urlopen(self.mount_url(query, page, self.c_index,
                             'cat:328,price:1,ppr_min:' + str(s_price) + ',ppr_max:' + str(e_price)))                        
-                    parser = GPSProductListParser()
+                    parser = PIDParser()
                     parser.feed(f.read().decode('UTF-8'))
                     parser.close()
                     if len(parser.cid) == 0:
@@ -192,4 +190,4 @@ class CIDSpider:
                     
         return parser
     
-cidSpider = CIDSpider()
+pidSpider = PIDSpider()
