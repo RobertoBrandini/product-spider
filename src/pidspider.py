@@ -1,4 +1,4 @@
-from pidparser import PIDParser
+from parsers.result_page_parser import ResultPageParser
 from config import *
 from pytz import timezone
 import datetime
@@ -14,7 +14,7 @@ import math
 import os
 
 class PIDSpider:
-    "PID Spider"
+    "PIDSpider"
     
     query = 'laptop'
     total_results = 0
@@ -166,7 +166,7 @@ class PIDSpider:
                     else:
                         f = urllib.urlopen(self.mount_url(query, page, self.c_index,
                             'cat:328,price:1,ppr_min:' + str(s_price) + ',ppr_max:' + str(e_price)))                        
-                    parser = PIDParser()
+                    parser = ResultPageParser()
                     parser.feed(f.read().decode('UTF-8'))
                     parser.close()
                     if len(parser.cid) == 0:

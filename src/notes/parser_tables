@@ -1,0 +1,55 @@
+====================================================================
+PRODUCT ID SPIDER
+====================================================================
+
+Result Page Example
+- http://www.google.com/search?tbm=shop&q=laptop
+
+--------------------------------------------------------------------
+
+Result Page
+- Product
+- ProductRank
+
+====================================================================
+PRODUCT DATA SPIDER
+====================================================================
+
+Product Main Page Example
+http://www.google.com/products/catalog?cid=2748933489021536393
+
+Product Specs Page Example
+http://www.google.com/products/catalog?q=&cid=2748933489021536393&os=tech-specs
+
+Product Sellers Page Example
+http://www.google.com/products/catalog?q=&cid=2748933489021536393&os=sellers
+
+--------------------------------------------------------------------
+
+OBS: ProductCategory is constant
+
+Product Main Page
+- ProductInfo
+- ProductPicture
+- ProcuctStars
+
+Product Specs Page
+- ProductFeature
+- ProductFeatureGroup
+- Product_ProductFeature
+
+Product Sellers Page
+- Store_Product
+
+====================================================================
+STORE DATA SPIDER
+====================================================================
+
+Store Main Page Example
+http://www.google.com/products/seller?zmi=amazon.com
+
+--------------------------------------------------------------------
+
+Store Main Page
+- Store
+- Store_Stars

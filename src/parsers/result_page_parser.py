@@ -1,7 +1,7 @@
 from HTMLParser import HTMLParser
 
-class PIDParser(HTMLParser):
-    Name = "PIDParser"
+class ResultPageParser(HTMLParser):
+    Name = "ResultPageParser"
     
     def __init__(self):
         HTMLParser.__init__(self)
