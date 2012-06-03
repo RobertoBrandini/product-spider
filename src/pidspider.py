@@ -144,7 +144,7 @@ class PIDSpider:
                 if not (c,) in self.collected:
                     self.collected.append((c,))
                     self.total_new_collected += 1                    
-                    conn.query('INSERT INTO product VALUES(' + c + ', \'' + str(datetime.date.today()) + '\')')
+                    conn.query('INSERT INTO product (cid_product, dt_collected, id_category) VALUES(' + c + ', \'' + str(datetime.date.today()) + '\', 328)')
         
         conn.close()
         
@@ -171,7 +171,7 @@ class PIDSpider:
                     parser.close()
                     if len(parser.cid) == 0:
                         raise Exception(1, 'Request error')
-                    crawled = True                        
+                    crawled = True
                 except IOError as e:
                     self.log("Bridge #" + str(self.c_index) + " is offline.")                    
                     self.c_index += 1
