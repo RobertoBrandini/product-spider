@@ -5,8 +5,6 @@ class ProductMainPageParser():
     
     # title
     pTitle = None
-    # current price
-    pPrice = None
     # rating meta data
     pCurrentRating = None; pWorstRating = None; pBestRating = None
     # number of reviews
@@ -26,8 +24,6 @@ class ProductMainPageParser():
         self.pTitle = self.soup.find(id="product-name").find("span").get_text()        
         
         pBasInfoDiv = self.soup.find(id="product-basic-info")
-        
-        self.pPrice = pBasInfoDiv.find_all("span", { "class" : "main-price" })[0].get_text()[1:]
         
         ratingDiv = pBasInfoDiv.find_all("div", { "class" : "product-rating-show-plusone" })[0]
         self.pCurrentRating = ratingDiv.find_all("meta", { "itemprop" : "ratingValue"  })[0]["content"]

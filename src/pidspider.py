@@ -172,6 +172,7 @@ class PIDSpider:
                     if len(parser.cid) == 0:
                         raise Exception(1, 'Request error')
                     crawled = True
+                
                 except IOError as e:
                     self.log("Bridge #" + str(self.c_index) + " is offline.")                    
                     self.c_index += 1
