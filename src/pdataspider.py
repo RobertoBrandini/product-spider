@@ -45,7 +45,7 @@ class PDataSpider:
             else:
                 self.log("This product no longer exists on Google Product Search and has been disabled in the database.\n")
                 self.disable_product(cid[0])
-                disabled += 1
+                disabled_products += 1
                 continue
             
             # collecting product offers
