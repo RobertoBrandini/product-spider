@@ -25,7 +25,7 @@ class ProductSpecsPageParser():
             self.blocked = True
             return
         
-        if self.soup.title == "302 Moved":
+        if self.soup.title.get_text() == "302 Moved":
             self.blocked = True
             return
         

@@ -28,7 +28,7 @@ class PDataSpider:
         signal.signal(signal.SIGINT, self.quit_signal_handler)
         atexit.register(self.__destructor__)
         
-        self.log("Product data collection process started (limit: " + str(self.crawl_limit) + ").\n")
+        self.log("Product data collection process started (limit: " + str(self.crawl_limit) + " products).\n")
         
         crawled_products = 0
         disabled_products = 0
