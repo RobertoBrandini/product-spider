@@ -40,13 +40,31 @@ class ProductSellersPageParser():
             
             if len(domain_div) > 0:
                 has_page = True
-                domain = domain_div[0]["href"].split("mi=")[1].split("&q=")[0]
+                
+                store_zmi = domain_div[0]["href"].split("zmi=")
+                if len(store_zmi) > 1:
+                    store_zmi = store_zmi[1].split("&q=")[0]
+                else:
+                    store_zmi = None
+                    store_cmi = domain_div[0]["href"].split("cmi=")
+                    if len(store_cmi) > 1:
+                        store_cmi = store_cmi[1].split("&q=")[0]
+                
+                if store_zmi != None:
+                    domain = store_zmi
+                    domain_type = "zmi"
+                else:
+                    domain = store_cmi
+                    domain_type = "cmi"
+                    
             else:
                 has_page = False
                 if url != None:
                     domain = url.replace("http://", "").replace("www.", "").split("/")[0]
+                    domain_type = "url"
                 else:
                     domain = None
+                    domain_type = None
             
             # setting the product condition
             condition = row.find_all("td", { "class" : "condition-col" })[0].find_all("span", { "class" : "f" })[0].get_text()
@@ -57,14 +75,14 @@ class ProductSellersPageParser():
             
             if len(tax_shipping_spam) == 0:
                 tax_shipping = None
-            else:                
+            else:
                 tax_shipping_nb = tax_shipping_spam[0].find_all("nobr")
                 
                 if len(tax_shipping_nb) > 0:
                     multiple_tax_shipping = []
                     for i in range(len(tax_shipping_nb)):
                         multiple_tax_shipping.append(tax_shipping_nb[i].get_text().strip())
-                        tax_shipping = ', '.join(multiple_tax_shipping)
+                        tax_shipping = ','.join(multiple_tax_shipping)
                 elif len(tax_shipping_spam[0].get_text().strip()) > 0:
                     tax_shipping = tax_shipping_spam[0].get_text().strip()
                 else:
@@ -90,7 +108,7 @@ class ProductSellersPageParser():
             
             self.product_offers.append({ "seller_name" : name,
                                          "seller_domain" : domain,
-                                         "seller_has_page" : has_page,
+                                         "seller_domain_type" : domain_type,
                                          "offer_url" : url,
                                          "offer_condition" : condition,
                                          "offer_tax_shipping" : tax_shipping,

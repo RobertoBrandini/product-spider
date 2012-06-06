@@ -1,4 +1,5 @@
 from parsers.result_page_parser import ResultPageParser
+from user_exceptions.request_exception import RequestException
 from config import *
 from pytz import timezone
 import datetime
@@ -170,15 +171,15 @@ class PIDSpider:
                     parser.feed(f.read().decode('UTF-8'))
                     parser.close()
                     if len(parser.cid) == 0:
-                        raise Exception(1, 'Request error')
+                        raise RequestException(1, 'Request error')
                     crawled = True
                 
                 except IOError as e:
                     self.log("Bridge #" + str(self.c_index) + " is offline.")                    
                     self.c_index += 1
                     recovered = True
-                except Exception as e:
-                    if e.args[0] == 1:
+                except RequestException as e:
+                    if e.value == 1:
                          self.log("Bridge #" + str(self.c_index) + " has been blocked.")
                          self.c_index += 1
                          recovered = True

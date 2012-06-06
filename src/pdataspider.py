@@ -28,7 +28,7 @@ class PDataSpider:
         atexit.register(self.__destructor__)
         
         for cid in self.get_outdated_cids():
-            print cid[0]
+            self.log("Collecting data from product #" + cid[0] + ".")
             
             # collection product basic information
             product_info = self.crawl_page( "MAIN_PAGE", [cid[0]] ).get_product_basic_info()
@@ -48,6 +48,8 @@ class PDataSpider:
             
             self.store_product_data(cid[0], product_info, product_offers, product_specs)
             
+            self.log("The data was crawled successfully from product <\"" + product_info["title"] + "\">.\n")
+            
     def quit_signal_handler(self, signal, frame):
         self.log("Product data collection process aborted.")
         sys.exit(0)
@@ -66,13 +68,13 @@ class PDataSpider:
         return psycopg2.connect("dbname = 'itemcase' host='50.116.1.34' port=5432 user='postgres' password='" + 
                                 base64.decodestring('ZmFzdE1vdmluZzJCcmVha0V2ZXJ5dGhpbmc=') + "'" )
     
-    def store_product_data(self, cid, info, offers, specs):        
+    def store_product_data(self, cid, info, offers, specs):
         conn = self.db_connect()
         cur = conn.cursor()
         
-        import pdb; pdb.set_trace()
-        
         today = str(datetime.date.today())
+        
+        cur.execute("UPDATE product SET dt_last_crawled = %s WHERE cid_product = %s", (today, cid,))
         
         cur.execute("SELECT * FROM product_info WHERE cid_product = %s", (cid,))        
         r = cur.fetchone()
@@ -80,8 +82,9 @@ class PDataSpider:
         # if this product doesn't have a product_info table, insert a new table
         if r == None:
             cur.execute("INSERT INTO product_info VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s )", 
-                        (cid, today, info["title"], info["reviews"], info["best_rating"],
-                         info["worst_rating"], info["summary"], info["description"], info["features"],))
+                        (cid, today, info["title"], info["reviews"], info["summary"], info["description"], 
+                         info["features"], info["best_rating"], info["worst_rating"],))
+            self.log("The product info table was created.")
         # otherwise, update the existing table
         else:
             if info["title"] == None: title = r[2]
@@ -90,71 +93,105 @@ class PDataSpider:
             if info["reviews"] == None: reviews = r[3]
             else: reviews = info["reviews"]
             
-            if info["best_rating"] == None: best_rating = r[4]
+            if info["best_rating"] == None: best_rating = r[7]
             else: best_rating = info["best_rating"]
             
-            if info["worst_rating"] == None: worst_rating = r[5]
+            if info["worst_rating"] == None: worst_rating = r[8]
             else: worst_rating = info["worst_rating"]
             
-            if info["summary"] == None: summary = r[6]
+            if info["summary"] == None: summary = r[4]
             else: summary = info["summary"]
             
-            if info["description"] == None: description = r[7]
+            if info["description"] == None: description = r[5]
             else: description = info["description"]
             
-            if info["features"] == None: features = r[8]
+            if info["features"] == None: features = r[6]
             else: features = info["features"]
             
-            cur.execute("UPDATE product_info SET ( dt_updated = %s, ds_title = %s, nr_reviews = %s, nr_best_rating = %s, " +
-                        "nr_worst_rating = %s, ds_summary = %s, ds_description = %s, ds_features = %s WHERE cid_product = %s )", 
+            cur.execute("UPDATE product_info SET dt_updated = %s, ds_title = %s, nr_reviews = %s, nr_best_rating = %s, " +
+                        "nr_worst_rating = %s, ds_summary = %s, ds_description = %s, ds_features = %s WHERE cid_product = %s", 
                         (today, info["title"], info["reviews"], info["best_rating"],
                          info["worst_rating"], info["summary"], info["description"], info["features"], cid,))
+            
+            self.log("Product info table updated.")
         
-        cur.execute("SELECT dt_collected FROM product_rating WHERE cid_product = %s", (cid,))
-        r = cur.fetchone()
+        if info["current_rating"] != None:
+            cur.execute("SELECT dt_collected FROM product_rating WHERE cid_product = %s", (cid,))
+            r = cur.fetchone()
+            
+            if r == None or datetime.date.strftime(r[0], '%Y-%m-%d') != today:
+                cur.execute("INSERT INTO product_rating VALUES (%s, %s, %s)", (cid, today, info["current_rating"],))
+                self.log("A new rating has been set for this product.")
         
-        if r == None or date.strftime(r[0], '%Y-%m-%d') != today:
-            cur.execute("INSERT INTO product_rating VALUES (%s, %s, %s)", (cid, today, info["current_rating"],))
+        new_stores = 0
+        new_offers = 0
+        closed_offers = 0
         
         for offer in offers:
             cur.execute("SELECT ds_domain FROM store WHERE ds_domain = %s", (offer["seller_domain"],))
             r = cur.fetchone()
             
             if r == None:
-                cur.execute("INSERT INTO store (%s, %s, %s, %s)", (offer["seller_domain"], offer["seller_name"], 
-                                                                   offer["seller_has_page"], 0,))
+                cur.execute("INSERT INTO store VALUES (%s, %s, %s, %s)", (offer["seller_domain"], offer["seller_name"], 
+                                                                          0, offer["seller_domain_type"],))
+                new_stores += 1
                 
-            cur.execute("SELECT * FROM offer WHERE ds_url_offer = %s AND dt_end IS NOT NULL", (offer["offer_url"],))
+            cur.execute("SELECT * FROM offer WHERE ds_url_offer = %s AND dt_end IS NULL", (offer["offer_url"],))
             r = cur.fetchone()
+            
+            if offer["offer_base_price"] == None: offer_base_price = None
+            else: offer_base_price = int(offer["offer_base_price"])
+                
+            if offer["offer_total_price"] == None: offer_total_price = None
+            else: offer_total_price = int(offer["offer_total_price"])
             
             insert_new_offer = False
             if r == None:
                 insert_new_offer = True            
-            elif r[5] != offer["offer_base_price"] or r[6] != offer["offer_total_price"] or r[7] != offer["offer_condition"]:
-                    cur.execute("UPDATE offer SET dt_end = %s WHERE ds_url_offer = %s", (today, offer["offer_url"],))
-                    cur.execute("INSERT INTO offer ")
+            elif r[6] != offer_base_price or r[7] != offer_total_price or r[8] != offer["offer_condition"]:
+                    closed_offers += 1
+                    id_offer = r[0]
+                    cur.execute("UPDATE offer SET dt_end = %s WHERE id_offer = %s", (today, id_offer,))                    
                     insert_new_offer = True
-                    
+            
             if insert_new_offer:
-                cur.execute("INSERT INTO offer VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", 
-                            (offer["offer_url"], offer["seller_domain"], cid, today, None, offer["offer_base_price"],
+                cur.execute("INSERT INTO offer (id_offer, ds_domain_store, cid_product, ds_url_offer, dt_start, nr_base_price, " +
+                            "nr_total_price, ds_condition) VALUES (DEFAULT, %s, %s, %s, %s, %s, %s, %s) RETURNING id_offer", 
+                            (offer["seller_domain"], cid, offer["offer_url"], today, offer["offer_base_price"],
                              offer["offer_total_price"], offer["offer_condition"]))
+                new_offers += 1
+                
+                last_id = cur.fetchone()
+                
                 if offer["offer_tax_shipping"] != None:
-                    multiple_tax_shipping = offer["offer_tax_shipping"].split(",")
+                    multiple_tax_shipping = offer["offer_tax_shipping"].split(",")                    
                     for tax_shipping in multiple_tax_shipping:
-                        cur.execute("SELECT ds_url_offer FROM tax_shipping WHERE ds_url_offer = %s AND ds_tax_shipping = %s",
-                                    (offer["offer_url"], tax_shipping,))
-                        r = cur.fetchone()
-                        
-                        if r == None:
-                            cur.execute("INSERT INTO tax_shipping VALUES (%s, %s)", (offer["offer_url"], tax_shipping,))
-                            
+                        cur.execute("INSERT INTO tax_shipping (id_offer, ds_tax_shipping) VALUES (%s, %s)", 
+                                    (last_id[0], tax_shipping,))
+        
+        if new_stores > 0:
+            self.log(str(new_offers) + " IDs of new stores were collected.")
+        
+        if closed_offers > 0:
+            self.log(str(closed_offers) + " offers for this product were closed.")
+            
+        if new_offers > 0:
+            self.log(str(new_offers) + " new offers for this product were collected.")
+        
+        new_feature_groups = 0
+        
         for feature_group in specs[0]:
             cur.execute("SELECT * FROM feature_group WHERE ds_name = %s AND id_category = %s", (feature_group, 328))
             r = cur.fetchone()
             
             if r == None:
-                cur.execute("INSERT INTO feature_group VALUES (%s, %s)", (feature_group, 328,))
+                new_feature_groups += 1
+                cur.execute("INSERT INTO feature_group VALUES (%s, %s)", (feature_group, 328,))                
+        
+        if new_feature_groups > 0:
+            self.log(str(new_feature_groups) + " new feature groups were collected.")
+        
+        new_features = 0
         
         for feature in specs[1]:
             cur.execute("SELECT * FROM feature WHERE ds_name = %s AND ds_name_feature_group = %s AND id_category = %s", 
@@ -162,16 +199,27 @@ class PDataSpider:
             r = cur.fetchone()
             
             if r == None:
+                new_features += 1
                 cur.execute("INSERT INTO feature VALUES (%s, %s, %s)", (feature[0], feature[1], 328,))
         
+        if new_features > 0:
+            self.log(str(new_features) + " new features were collected.")
+        
+        new_specs = 0
+        
         for spec in specs[2]:
-            cur.execute("SELECT * FROM product_spec WHERE cid_product = %s, ds_name_feature = %s AND " +
+            cur.execute("SELECT * FROM product_spec WHERE cid_product = %s AND ds_name_feature = %s AND " +
                         "ds_name_feature_group = %s AND id_category = %s", 
-                        (spec[0], spec[1], spec[2], 328))
+                        (cid, spec[1], spec[2], 328,))
             r = cur.fetchone()
             
             if r == None:
+                new_specs += 1
+                
                 cur.execute("INSERT INTO product_spec VALUES (%s, %s, %s, %s, %s)", (cid, spec[1], spec[2], 328, spec[0],))
+        
+        if new_specs > 0:
+            self.log(str(new_specs) + " new specifications for this product were collected.")
         
         conn.commit()
         cur.close()
@@ -200,7 +248,7 @@ class PDataSpider:
         conn = self.db_connect()
         cur = conn.cursor()
         
-        cur.execute('SELECT cid_product FROM product ORDER BY dt_last_crawled DESC, dt_collected DESC LIMIT 10')
+        cur.execute('SELECT cid_product FROM product ORDER BY dt_last_crawled DESC, dt_collected DESC LIMIT 500')
         
         r = cur.fetchall()        
         cur.close()
