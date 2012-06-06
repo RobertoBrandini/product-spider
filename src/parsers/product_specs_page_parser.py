@@ -25,6 +25,10 @@ class ProductSpecsPageParser():
             self.blocked = True
             return
         
+        if self.soup.title == "302 Moved":
+            self.blocked = True
+            return
+        
         section_inner = self.soup.find_all("div", { "class" : "section-inner" })
         
         if len(section_inner) > 0:

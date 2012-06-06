@@ -11,6 +11,8 @@ class ProductMainPageParser():
         self.product_pictures = []
         # true when the html was not correctly parsed
         self.blocked = False
+        # true if the product cid still exists on google product search
+        self.exists = True
         
     def feed(self, html):
         self.soup = BeautifulSoup(html)
@@ -22,24 +24,49 @@ class ProductMainPageParser():
             return
         
         # setting the product title
-        title = self.soup.find(id="product-name").find("span").get_text()
-        if title == "":  title = None
+        title_div = self.soup.find(id="product-name")
+        
+        if title_div == None:
+            title = None
+        else:
+            title = title_div.find("span").get_text().strip()
+            if title == "":  title = None
         
         product_basic_info_div = self.soup.find(id="product-basic-info")
+        
+        if product_basic_info_div == None:
+            if self.soup.find(id="no-results") != None:
+                self.exists = False
+            else:
+                if self.soup.title != "302 Moved": print "Unknown page"
+                self.blocked = True
+                return
+            return
         
         # setting the product rating values
         rating_div = product_basic_info_div.find_all("div", { "class" : "product-rating-show-plusone" })        
         if len(rating_div) > 0:
-            current_rating = rating_div[0].find_all("meta", { "itemprop" : "ratingValue"  })[0]["content"]
-            best_rating = rating_div[0].find_all("meta", { "itemprop" : "bestRating"  })[0]["content"]
-            worst_rating = rating_div[0].find_all("meta", { "itemprop" : "worstRating"  })[0]["content"]
+            current_rating_div = rating_div[0].find_all("meta", { "itemprop" : "ratingValue"  })
+            if len(current_rating_div) > 0: current_rating = current_rating_div[0]["content"]
+            else: current_rating = None
+            
+            best_rating_div = rating_div[0].find_all("meta", { "itemprop" : "bestRating"  })
+            if len(best_rating_div) > 0: best_rating = best_rating_div[0]["content"]
+            else: best_rating = None
+            
+            worst_rating_div = rating_div[0].find_all("meta", { "itemprop" : "worstRating"  })
+            if len(worst_rating_div) > 0: worst_rating = worst_rating_div[0]["content"]
+            else: worst_rating = None
         else:
             current_rating = None; best_rating = None; worst_rating = None
         
         # setting the product review count
         product_reviews_div = product_basic_info_div.find_all("span", { "class" : "product-num-reviews" })
         if len(product_reviews_div) > 0:
-            reviews_count = product_reviews_div[1].find_all("span", { "class" : "fl" })[0].get_text().split(" ")[0]
+            if len(product_reviews_div) == 2:
+                reviews_count = product_reviews_div[1].find_all("span", { "class" : "fl" })[0].get_text().split(" ")[0]
+            else:
+                reviews_count = product_reviews_div[0].find_all("span", { "class" : "fl" })[0].get_text().split(" ")[0]
         else:
             reviews_count = None
         

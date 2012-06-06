@@ -20,18 +20,33 @@ class PDataSpider:
     "PDataSpider"
     
     c_index = 0
+    crawl_limit = 500
     
     def __init__(self):
-        self.log_f = open(log_output_file, 'a')
+        self.log_f = open(pdataspider_logfile, 'a')
         socket.setdefaulttimeout(20)
         signal.signal(signal.SIGINT, self.quit_signal_handler)
         atexit.register(self.__destructor__)
+        
+        self.log("Product data collection process started (limit: " + str(self.crawl_limit) + ").\n")
+        
+        crawled_products = 0
+        disabled_products = 0
         
         for cid in self.get_outdated_cids():
             self.log("Collecting data from product #" + cid[0] + ".")
             
             # collection product basic information
-            product_info = self.crawl_page( "MAIN_PAGE", [cid[0]] ).get_product_basic_info()
+            product_main_page = self.crawl_page( "MAIN_PAGE", [cid[0]] )
+            
+            if product_main_page.exists:                
+                product_info = product_main_page.get_product_basic_info()
+                crawled_products += 1
+            else:
+                self.log("This product no longer exists on Google Product Search and has been disabled in the database.\n")
+                self.disable_product(cid[0])
+                disabled += 1
+                continue
             
             # collecting product offers
             product_offers = []; page = 0; has_next_page = True
@@ -48,8 +63,11 @@ class PDataSpider:
             
             self.store_product_data(cid[0], product_info, product_offers, product_specs)
             
-            self.log("The data was crawled successfully from product <\"" + product_info["title"] + "\">.\n")
+            print ""
             
+        self.log("Data were collected from " + str(crawled_products) + " products.")
+        self.log(str(disabled_products) + " products have been disabled.")
+        
     def quit_signal_handler(self, signal, frame):
         self.log("Product data collection process aborted.")
         sys.exit(0)
@@ -224,6 +242,25 @@ class PDataSpider:
         conn.commit()
         cur.close()
         conn.close()
+    
+    def disable_product(self, cid):
+        conn = self.db_connect()
+        cur = conn.cursor()
+        
+        today = str(datetime.date.today())
+        
+        cur.execute("SELECT cid_product FROM product_info WHERE cid_product = %s", (cid,))
+        r = cur.fetchone()
+        
+        if r != None:
+            cur.execute("UPDATE offer SET dt_end = %s WHERE cid_product = %s", (today, cid,))
+            cud.execute("UPDATE product_info SET dt_updated = %s WHERE cid_product = %s", (today, cid,))
+        
+        cur.execute("UPDATE product SET bl_exists = false WHERE cid_product = %s", (cid,))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
         
     def mount_main_page_url(self, cid, c_index):
         p = urllib.urlencode({
@@ -248,7 +285,8 @@ class PDataSpider:
         conn = self.db_connect()
         cur = conn.cursor()
         
-        cur.execute('SELECT cid_product FROM product ORDER BY dt_last_crawled DESC, dt_collected DESC LIMIT 500')
+        cur.execute('SELECT cid_product FROM product WHERE bl_exists = true ' + 
+                    'ORDER BY dt_last_crawled DESC, dt_collected DESC LIMIT %s', (self.crawl_limit,))
         
         r = cur.fetchall()        
         cur.close()

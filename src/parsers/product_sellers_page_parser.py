@@ -21,7 +21,14 @@ class ProductSellersPageParser():
             self.blocked = True
             return
         
-        rows = self.soup.find(id="ps-sellers-content").find_all("tr", { "class" : "online-sellers-row" })
+        sellers_content_div = self.soup.find(id="ps-sellers-content")
+        
+        if sellers_content_div == None:
+            if self.soup.title != "302 Moved": print "Unknown page"
+            self.blocked = True
+            return
+        
+        rows = sellers_content_div.find_all("tr", { "class" : "online-sellers-row" })
         
         for row in rows:
             seller_name_spam = row.find_all("td", { "class" : "seller-col" })[0].find_all("span", { "class" : "seller-name" })[0]

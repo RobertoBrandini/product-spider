@@ -1,4 +1,6 @@
-log_output_file = 'log/gps.log'
+pidspider_logfile = 'log/pidspider.log'
+pdataspider_logfile = 'log/pdataspider.log'
+
 gps_output_file = '/home/daniel/com.itemcase.spider/src/offline_request/gps-laptop-query.html'
 local_gps_search_url = 'http://localhost/gps-laptop-query.html'
 c_files = [

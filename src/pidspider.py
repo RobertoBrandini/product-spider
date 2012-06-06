@@ -27,7 +27,7 @@ class PIDSpider:
     c_index = 0
     
     def __init__(self):
-        self.log_f = open(log_output_file, 'a')
+        self.log_f = open(pidspider_logfile, 'a')
         socket.setdefaulttimeout(20)
         signal.signal(signal.SIGINT, self.quit_signal_handler)
         atexit.register(self.__destructor__)
