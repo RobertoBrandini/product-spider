@@ -103,7 +103,7 @@ class ProductSellersPageParser():
             if len(total_price_spam) == 0:
                 total_price = None
             else:
-                total_price = total_price_spam[0].get_text().strip()[1:].split(".")[0].replace(",", "")
+                total_price = total_price_spam[0].get_text().strip()[1:].replace(",", "")
                 if total_price == "": total_price = None
                 
             # setting the product base price
@@ -112,7 +112,7 @@ class ProductSellersPageParser():
             if len(base_price_spam) == 0:
                 base_price = None
             else:
-                base_price = base_price_spam[0].get_text().strip()[1:].split(".")[0].replace(",", "")
+                base_price = base_price_spam[0].get_text().strip()[1:].replace(",", "")
                 if base_price == "": base_price = None
             
             self.product_offers.append({ "seller_name" : name,

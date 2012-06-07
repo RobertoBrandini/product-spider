@@ -66,9 +66,9 @@ class ProductMainPageParser():
         product_reviews_div = product_basic_info_div.find_all("span", { "class" : "product-num-reviews" })
         if len(product_reviews_div) > 0:
             if len(product_reviews_div) == 2:
-                reviews_count = product_reviews_div[1].find_all("span", { "class" : "fl" })[0].get_text().split(" ")[0]
+                reviews_count = product_reviews_div[1].find_all("span", { "class" : "fl" })[0].get_text().split(" ")[0].replace(",", "")
             else:
-                reviews_count = product_reviews_div[0].find_all("span", { "class" : "fl" })[0].get_text().split(" ")[0]
+                reviews_count = product_reviews_div[0].find_all("span", { "class" : "fl" })[0].get_text().split(" ")[0].replace(",", "")
         else:
             reviews_count = None
         

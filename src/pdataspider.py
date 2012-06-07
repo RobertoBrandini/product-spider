@@ -20,7 +20,7 @@ class PDataSpider:
     "PDataSpider"
     
     c_index = 0
-    crawl_limit = 500
+    crawl_limit = 1500
     
     def __init__(self):
         self.log_f = open(pdataspider_logfile, 'a')
@@ -158,10 +158,10 @@ class PDataSpider:
             r = cur.fetchone()
             
             if offer["offer_base_price"] == None: offer_base_price = None
-            else: offer_base_price = int(offer["offer_base_price"])
+            else: offer_base_price = float(offer["offer_base_price"])
                 
             if offer["offer_total_price"] == None: offer_total_price = None
-            else: offer_total_price = int(offer["offer_total_price"])
+            else: offer_total_price = float(offer["offer_total_price"])
             
             insert_new_offer = False
             if r == None:
