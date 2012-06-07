@@ -24,8 +24,9 @@ class ProductSellersPageParser():
         sellers_content_div = self.soup.find(id="ps-sellers-content")
         
         if sellers_content_div == None:
-            if self.soup.title.get_text() != "302 Moved": print "Unknown page! Here's the html:\n"
-            print html + "\n"
+            if self.soup.title.get_text() != "302 Moved":
+                print "Unknown page! Here's the html:\n"
+                print html + "\n"
             self.blocked = True
             return
         
@@ -125,12 +126,15 @@ class ProductSellersPageParser():
                                        })
         
         # setting the has_next_page value
-        current_page = self.soup.find(id="online_stores_pagination").find(id="n-to-n-start").get_text().strip()
-        current_page = current_page.split(" of ")
+        pagination_div = self.soup.find(id="online_stores_pagination")
         
-        if len(current_page) > 0:            
-            if current_page[0].split(" - ")[1] < current_page[1]:
-                self.has_next_page = True
+        if pagination_div != None: 
+            current_page = pagination_div.find(id="n-to-n-start").get_text().strip()
+            current_page = current_page.split(" of ")
+        
+            if len(current_page) > 0:
+                if current_page[0].split(" - ")[1] < current_page[1]:
+                    self.has_next_page = True
     
     def get_product_offers(self):
         return self.product_offers

@@ -38,8 +38,9 @@ class ProductMainPageParser():
             if self.soup.find(id="no-results") != None:
                 self.exists = False
             else:
-                if self.soup.title.get_text() != "302 Moved": print "Unknown page! Here's the html:\n"
-                print html + "\n"
+                if self.soup.title.get_text() != "302 Moved":
+                    print "Unknown page! Here's the html:\n"
+                    print html + "\n"
                 self.blocked = True
                 return
             return
