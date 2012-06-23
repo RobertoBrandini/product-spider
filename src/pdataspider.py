@@ -28,13 +28,13 @@ class PDataSpider:
         signal.signal(signal.SIGINT, self.quit_signal_handler)
         atexit.register(self.__destructor__)
         
-        self.log("Product data collection process started (limit: " + str(self.crawl_limit) + " products).\n")
+        self.log("Product data collection process started (limit: " + str(self.crawl_limit) + " products).\n", True)
         
         crawled_products = 0
         disabled_products = 0
         
         for cid in self.get_outdated_cids():
-            self.log("Collecting data from product #" + cid[0] + ".")
+            self.log("Collecting data from product #" + cid[0] + ".", False)
             
             # collection product basic information
             product_main_page = self.crawl_page( "MAIN_PAGE", [cid[0]] )
@@ -43,7 +43,7 @@ class PDataSpider:
                 product_info = product_main_page.get_product_basic_info()
                 crawled_products += 1
             else:
-                self.log("This product no longer exists on Google Product Search and has been disabled in the database.\n")
+                self.log("This product no longer exists on Google Product Search and has been disabled in the database.\n", False)
                 self.disable_product(cid[0])
                 disabled_products += 1
                 continue
@@ -63,21 +63,19 @@ class PDataSpider:
             
             self.store_product_data(cid[0], product_info, product_offers, product_specs)
             
-            print ""
-            
-        self.log("Data were collected from " + str(crawled_products) + " products.")
-        self.log(str(disabled_products) + " products have been disabled.")
+        self.log("Data were collected from " + str(crawled_products) + " products.", True)
+        self.log(str(disabled_products) + " products have been disabled.", True)
         
     def quit_signal_handler(self, signal, frame):
-        self.log("Product data collection process aborted.")
+        self.log("Product data collection process aborted.", True)
         sys.exit(0)
         
     def __destructor__(self):
         self.log_f.close()
         
-    def log(self, m):
+    def log(self, m, email):
         m = str(datetime.datetime.now(timezone('UTC'))).split('.')[0] + " (UTC): " + m
-        print m
+        if email: print m
         self.log_f.write(m + '\n')
         self.log_f.flush()
         os.fsync(self.log_f.fileno())
@@ -87,6 +85,7 @@ class PDataSpider:
                                 base64.decodestring('ZmFzdE1vdmluZzJCcmVha0V2ZXJ5dGhpbmc=') + "'" )
     
     def store_product_data(self, cid, info, offers, specs):
+        #try:
         conn = self.db_connect()
         cur = conn.cursor()
         
@@ -102,7 +101,8 @@ class PDataSpider:
             cur.execute("INSERT INTO product_info VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s )", 
                         (cid, today, info["title"], info["reviews"], info["summary"], info["description"], 
                          info["features"], info["best_rating"], info["worst_rating"],))
-            self.log("The product info table was created.")
+                
+            self.log("The product info table was created.", False)
         # otherwise, update the existing table
         else:
             if info["title"] == None: title = r[2]
@@ -131,15 +131,15 @@ class PDataSpider:
                         (today, info["title"], info["reviews"], info["best_rating"],
                          info["worst_rating"], info["summary"], info["description"], info["features"], cid,))
             
-            self.log("Product info table updated.")
+            self.log("Product info table updated.", False)
         
         if info["current_rating"] != None:
-            cur.execute("SELECT dt_collected FROM product_rating WHERE cid_product = %s", (cid,))
+            cur.execute("SELECT cid_product, dt_collected FROM product_rating WHERE cid_product = %s AND dt_collected = %s", (cid, today,))
             r = cur.fetchone()
             
-            if r == None or datetime.date.strftime(r[0], '%Y-%m-%d') != today:
+            if r == None:
                 cur.execute("INSERT INTO product_rating VALUES (%s, %s, %s)", (cid, today, info["current_rating"],))
-                self.log("A new rating has been set for this product.")
+                self.log("A new rating has been set for this product.", False)
         
         new_stores = 0
         new_offers = 0
@@ -188,13 +188,13 @@ class PDataSpider:
                                     (last_id[0], tax_shipping,))
         
         if new_stores > 0:
-            self.log(str(new_offers) + " IDs of new stores were collected.")
+            self.log(str(new_offers) + " IDs of new stores were collected.", False)
         
         if closed_offers > 0:
-            self.log(str(closed_offers) + " offers for this product were closed.")
+            self.log(str(closed_offers) + " offers for this product were closed.", False)
             
         if new_offers > 0:
-            self.log(str(new_offers) + " new offers for this product were collected.")
+            self.log(str(new_offers) + " new offers for this product were collected.", False)
         
         new_feature_groups = 0
         
@@ -207,7 +207,7 @@ class PDataSpider:
                 cur.execute("INSERT INTO feature_group VALUES (%s, %s)", (feature_group, 328,))                
         
         if new_feature_groups > 0:
-            self.log(str(new_feature_groups) + " new feature groups were collected.")
+            self.log(str(new_feature_groups) + " new feature groups were collected.", False)
         
         new_features = 0
         
@@ -221,7 +221,7 @@ class PDataSpider:
                 cur.execute("INSERT INTO feature VALUES (%s, %s, %s)", (feature[0], feature[1], 328,))
         
         if new_features > 0:
-            self.log(str(new_features) + " new features were collected.")
+            self.log(str(new_features) + " new features were collected.", False)
         
         new_specs = 0
         
@@ -237,11 +237,14 @@ class PDataSpider:
                 cur.execute("INSERT INTO product_spec VALUES (%s, %s, %s, %s, %s)", (cid, spec[1], spec[2], 328, spec[0],))
         
         if new_specs > 0:
-            self.log(str(new_specs) + " new specifications for this product were collected.")
+            self.log(str(new_specs) + " new specifications for this product were collected.", False)
         
         conn.commit()
         cur.close()
         conn.close()
+        #except Exception as e:
+        #    print "EXCEPTION"
+        #    import pdb; pdb.set_trace()
     
     def disable_product(self, cid):
         conn = self.db_connect()
@@ -254,7 +257,7 @@ class PDataSpider:
         
         if r != None:
             cur.execute("UPDATE offer SET dt_end = %s WHERE cid_product = %s", (today, cid,))
-            cud.execute("UPDATE product_info SET dt_updated = %s WHERE cid_product = %s", (today, cid,))
+            cur.execute("UPDATE product_info SET dt_updated = %s WHERE cid_product = %s", (today, cid,))
         
         cur.execute("UPDATE product SET bl_exists = false WHERE cid_product = %s", (cid,))
         
@@ -297,11 +300,12 @@ class PDataSpider:
     def crawl_page(self, page_type, args):
         crawled = False
         recovered = False
+        first_failure_index = -1
         
         while not crawled:
-            if self.c_index < len(c_files):
+            if self.c_index != first_failure_index:
                 if recovered:
-                    self.log("Using bridge #" + str(self.c_index) + ".")
+                    self.log("Using bridge #" + str(self.c_index) + ".", True)
                     
                 try:
                     if page_type == "MAIN_PAGE":
@@ -323,18 +327,22 @@ class PDataSpider:
                     crawled = True
                 
                 except IOError as e:
-                    self.log("Bridge #" + str(self.c_index) + " is offline.")                    
+                    self.log("Bridge #" + str(self.c_index) + " is offline.", True)
                     self.c_index += 1
-                    recovered = True                
+                    recovered = True
                 
                 except RequestException as e:
                     if e.value == 1:
-                         self.log("Bridge #" + str(self.c_index) + " has been blocked.")
+                         self.log("Bridge #" + str(self.c_index) + " has been blocked.", True)
+                         if first_failure_index == -1: first_failure_index = self.c_index
                          self.c_index += 1
                          recovered = True
+                         
+                finally:
+                    if (len(c_files) - 1) < self.c_index: self.c_index = 0
                 
             else:
-                self.log("All bridges are blocked/offline.")
+                self.log("All bridges are blocked/offline.", True)
                 sys.exit()
                     
         return parser

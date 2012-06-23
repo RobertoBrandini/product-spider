@@ -44,7 +44,19 @@ class ResultPageParser(HTMLParser):
     
     def handle_data(self, data):
         if self.inPagesDiv:
-            self.total_results = int(data.split(" ")[1].replace(",", ""))
+            resFound = True
+            resIndex = -1            
+            res = data.split(" ")[resIndex]
+            while (res != "results"):                
+                resIndex -= 1
+                res = data.split(" ")[resIndex]
+                if resIndex < 10:
+                    print "Total results could not be found in: " + data
+                    resFound = False
+                    break
+            
+            if resFound:
+                self.total_results = int(data.split(" ")[resIndex - 1].replace(",", ""))
     
     def handle_endtag(self, tag):
         # ajusts the wrap div level

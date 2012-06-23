@@ -42,20 +42,20 @@ class PIDSpider:
             (s_price, e_price, results) = self.get_next_price_interval()
             self.process_query(self.query, 1, int(math.ceil(results/10)), s_price, e_price)
         
-        self.log("At this moment, the database contains " + str(len(self.collected)) + " unique CIDs.")
+        self.log("At this moment, the database contains " + str(len(self.collected)) + " unique CIDs.", True)
     
     def __destructor__(self):
         self.log_f.close()
     
-    def log(self, m):
+    def log(self, m, email):
         m = str(datetime.datetime.now(timezone('UTC'))).split('.')[0] + " (UTC): " + m
-        print m
+        if email: print m
         self.log_f.write(m + '\n')
         self.log_f.flush()
         os.fsync(self.log_f.fileno())
     
     def quit_signal_handler(self, signal, frame):
-        self.log("CID collection process aborted.")
+        self.log("CID collection process aborted.", True)
         sys.exit(0)
     
     def mount_url(self, query, page, c_index, tbs = ''):
@@ -72,7 +72,7 @@ class PIDSpider:
     def get_collected_cids(self):
         conn = pg.connect('itemcase', '50.116.1.34', 5432, None, None, 'postgres', 
                           base64.decodestring('ZmFzdE1vdmluZzJCcmVha0V2ZXJ5dGhpbmc='))
-        r = conn.query('SELECT cid_product FROM product').getresult()
+        r = conn.query('SELECT cid_product, bl_exists FROM product').getresult()
         conn.close()
         return r
     
@@ -84,7 +84,7 @@ class PIDSpider:
         break_point = s
         requests = 0
         
-        self.log("Initial price interval: " + str(s) + "-" + str(e) + " (" + str(total_results) + " results)")
+        self.log("Initial price interval: " + str(s) + "-" + str(e) + " (" + str(total_results) + " results)", False)
         
         while total_results > self.upper_limit or total_results < self.lower_limit:            
             if total_results > self.upper_limit:
@@ -99,7 +99,7 @@ class PIDSpider:
                 self.intervals[s].append((e_break, r.total_results))
                 self.intervals[e_break + 1].append((e, total_results - r.total_results))
                 
-                self.log("Break: " + str(s) + "-" + str(e) + " -> " + str(s) + "-" + str(e_break) + " (" + str(r.total_results) + " results)")
+                self.log("Break: " + str(s) + "-" + str(e) + " -> " + str(s) + "-" + str(e_break) + " (" + str(r.total_results) + " results)", False)
                 
                 e = e_break
                 total_results = r.total_results
@@ -113,7 +113,7 @@ class PIDSpider:
                     break_point = next_s
                     total_results += next_total_results
                     
-                    self.log("Join: " + str(s) + "-" + str(e) + " -> " + str(s) + "-" + str(next_e) + " (" + str(total_results) + " results)")
+                    self.log("Join: " + str(s) + "-" + str(e) + " -> " + str(s) + "-" + str(next_e) + " (" + str(total_results) + " results)", False)
                     
                     e = next_e
                     
@@ -123,7 +123,7 @@ class PIDSpider:
                 
             e_index += 1
         
-        self.log(str(requests) + " requests were performed to define the filters.")
+        self.log(str(requests) + " requests were performed to define the filters.", True)
         
         r = (s, e, total_results)
         self.current = e + 1
@@ -132,9 +132,9 @@ class PIDSpider:
     
     def process_query(self, query, s_page, e_page, s_price, e_price):
         self.log("CID collection process started (pages: " + str(e_page - s_page + 1) + 
-                 ", p. interval: " + str(s_price) + "-" + str(e_price) + ").")
+                 ", p. interval: " + str(s_price) + "-" + str(e_price) + ").", True)
         
-        self.log("Using bridge #" + str(self.c_index) + ".")
+        self.log("Using bridge #" + str(self.c_index) + ".", False)
         
         conn = pg.connect('itemcase', '50.116.1.34', 5432, None, None, 'postgres', 
                base64.decodestring('ZmFzdE1vdmluZzJCcmVha0V2ZXJ5dGhpbmc='))
@@ -142,24 +142,29 @@ class PIDSpider:
         for i in range(s_page, e_page + 1):
             r = self.crawl_page(self.query, i, s_price, e_price)
             for c in r.cid:
-                if not (c,) in self.collected:
-                    self.collected.append((c,))
-                    self.total_new_collected += 1                    
-                    conn.query('INSERT INTO product (cid_product, dt_collected, id_category) VALUES(' + c + ', \'' + str(datetime.date.today()) + '\', 328)')
-        
+                if not (c,'t') in self.collected:
+                    if (c, 'f') in self.collected:
+                        self.log('ATTENTION ==> The product #' + c + ' is enabled again.', True)
+                    else:
+                        self.collected.append((c, 't'))
+                        self.total_new_collected += 1
+                        self.log('CID #' + str(c) + " was collected.", False)
+                        conn.query('INSERT INTO product (cid_product, dt_collected, id_category) VALUES(' + c + ', \'' + str(datetime.date.today()) + '\', 328)')
+                    
         conn.close()
         
-        self.log("CID collection process finished.")
-        self.log(str(self.total_new_collected) + " new CIDs have been collected so far.\n")
+        self.log("CID collection process finished.", False)
+        self.log(str(self.total_new_collected) + " new CIDs have been collected so far.\n", False)
     
     def crawl_page(self, query, page, s_price = 0, e_price = 0):
         crawled = False
         recovered = False
+        first_failure_index = -1
         
         while not crawled:
-            if self.c_index < len(c_files):
+            if self.c_index != first_failure_index:
                 if recovered:
-                    self.log("Using bridge #" + str(self.c_index) + ".")
+                    self.log("Using bridge #" + str(self.c_index) + ".", True)
                     
                 try:
                     if s_price == 0 or e_price == 0:
@@ -175,19 +180,21 @@ class PIDSpider:
                     crawled = True
                 
                 except IOError as e:
-                    self.log("Bridge #" + str(self.c_index) + " is offline.")                    
+                    self.log("Bridge #" + str(self.c_index) + " is offline.", True)                    
                     self.c_index += 1
                     recovered = True
                 except RequestException as e:
                     if e.value == 1:
-                         self.log("Bridge #" + str(self.c_index) + " has been blocked.")
+                         self.log("Bridge #" + str(self.c_index) + " has been blocked.", True)
+                         if first_failure_index == -1: first_failure_index = self.c_index
                          self.c_index += 1
+                         if (len(c_files) - 1) < self.c_index: self.c_index = 0
                          recovered = True
                     else:
-                         self.log(str(e.args[0]) + ".")
+                         self.log(str(e.args[0]) + ".", True)
                          sys.exit()
             else:
-                self.log("All bridges are blocked/offline.")
+                self.log("All bridges are blocked/offline.", True)
                 sys.exit()
                     
         return parser

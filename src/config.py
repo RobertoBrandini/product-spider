@@ -12,6 +12,7 @@ c_files = [
     'http://www.webulando.com.br/curl.php',                         # webulando    
     'http://gpsc.comli.com/curl.php',                               # 000webhost
     'http://gpsc1.site50.net/curl.php',                             # 000webhost
+    'http://www.gpsc.bugs3.com/curl.php',                           # serversfree
     'http://gpsc.ueuo.com/curl.php',                                # freewebhostingarea
     'http://gpsc.6te.net/curl.php',                                 # freewebhostingarea
     'http://gpsc.orgfree.com/curl.php',                             # freewebhostingarea
