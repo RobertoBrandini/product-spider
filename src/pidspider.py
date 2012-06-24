@@ -96,8 +96,8 @@ class PIDSpider:
                 
                 r = self.crawl_page(self.query, 1, s, e_break)
                 
-                self.intervals[s].append((e_break, r.total_results))
-                self.intervals[e_break + 1].append((e, total_results - r.total_results))
+                self.intervals[s].append((e_break, r.get_total_results()))
+                self.intervals[e_break + 1].append((e, total_results - r.get_total_results()))
                 
                 self.log("Break: " + str(s) + "-" + str(e) + " -> " + str(s) + "-" + str(e_break) + " (" + str(r.total_results) + " results)", False)
                 
@@ -141,7 +141,7 @@ class PIDSpider:
         
         for i in range(s_page, e_page + 1):
             r = self.crawl_page(self.query, i, s_price, e_price)
-            for c in r.cid:
+            for c in r.get_product_cids():
                 if not (c,'t') in self.collected:
                     if (c, 'f') in self.collected:
                         self.log('ATTENTION ==> The product #' + c + ' is enabled again.', True)
@@ -168,21 +168,26 @@ class PIDSpider:
                     
                 try:
                     if s_price == 0 or e_price == 0:
-                        f = urllib.urlopen(self.mount_url(query, page, self.c_index))
+                        url = self.mount_url(query, page, self.c_index)
+                        f = urllib.urlopen(url)
                     else:
-                        f = urllib.urlopen(self.mount_url(query, page, self.c_index,
-                            'cat:328,price:1,ppr_min:' + str(s_price) + ',ppr_max:' + str(e_price)))                        
+                        url = self.mount_url(query, page, self.c_index, 
+                                             'cat:328,price:1,ppr_min:' + str(s_price) + ',ppr_max:' + str(e_price))
+                        f = urllib.urlopen(url)                        
                     parser = ResultPageParser()
                     parser.feed(f.read().decode('UTF-8'))
-                    parser.close()
-                    if len(parser.cid) == 0:
+                    
+                    if not parser.crawled():
                         raise RequestException(1, 'Request error')
+                    
                     crawled = True
                 
                 except IOError as e:
                     self.log("Bridge #" + str(self.c_index) + " is offline.", True)                    
                     self.c_index += 1
                     recovered = True
+                    print url
+                    
                 except RequestException as e:
                     if e.value == 1:
                          self.log("Bridge #" + str(self.c_index) + " has been blocked.", True)
@@ -190,9 +195,14 @@ class PIDSpider:
                          self.c_index += 1
                          if (len(c_files) - 1) < self.c_index: self.c_index = 0
                          recovered = True
+                         print url
                     else:
                          self.log(str(e.args[0]) + ".", True)
                          sys.exit()
+                         
+                finally:
+                    if (len(c_files) - 1) < self.c_index: self.c_index = 0
+                         
             else:
                 self.log("All bridges are blocked/offline.", True)
                 sys.exit()
