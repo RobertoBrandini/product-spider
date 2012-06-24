@@ -22,7 +22,7 @@ class PIDSpider:
     price_limit = 10000
     intervals = [[] for row in range(price_limit)]
     current = 1
-    upper_limit = 980
+    upper_limit = 990
     lower_limit = 300
     c_index = 0
     
@@ -79,9 +79,10 @@ class PIDSpider:
     def get_next_price_interval(self):
         s = self.current
         e_index = 0
+        last_valid_end_index = 0
         e = self.intervals[s][e_index][0]
         total_results = self.intervals[s][e_index][1]
-        break_point = s
+        break_point = s        
         requests = 0
         
         self.log("Initial price interval: " + str(s) + "-" + str(e) + " (" + str(total_results) + " results)", False)
@@ -89,7 +90,9 @@ class PIDSpider:
         while total_results > self.upper_limit or total_results < self.lower_limit:            
             if total_results > self.upper_limit:
                 if (e - break_point) == 1:
-                    e = break_point
+                    e = self.intervals[s][last_valid_end_index][0]
+                    total_results = self.intervals[s][last_valid_end_index][1]
+                    if s == e: print "More than " + str(self.upper_limit) + " results between prices " + str(s) + "-" +  str(e) + "."
                     break
                 
                 e_break = int(round((break_point + e)/2))
@@ -99,12 +102,13 @@ class PIDSpider:
                 self.intervals[s].append((e_break, r.get_total_results()))
                 self.intervals[e_break + 1].append((e, total_results - r.get_total_results()))
                 
-                self.log("Break: " + str(s) + "-" + str(e) + " -> " + str(s) + "-" + str(e_break) + " (" + str(r.total_results) + " results)", False)
+                self.log("Break: " + str(s) + "-" + str(e) + " -> " + str(s) + "-" + str(e_break) + " (" + str(r.get_total_results()) + " results)", False)
                 
                 e = e_break
-                total_results = r.total_results
+                total_results = r.get_total_results()
                 requests += 1
             else:
+                last_valid_end_index = e_index
                 next_s = e + 1
                 if next_s < self.price_limit:
                     next_e = self.intervals[next_s][0][0]
@@ -186,7 +190,6 @@ class PIDSpider:
                     self.log("Bridge #" + str(self.c_index) + " is offline.", True)                    
                     self.c_index += 1
                     recovered = True
-                    print url
                     
                 except RequestException as e:
                     if e.value == 1:
@@ -195,7 +198,6 @@ class PIDSpider:
                          self.c_index += 1
                          if (len(c_files) - 1) < self.c_index: self.c_index = 0
                          recovered = True
-                         print url
                     else:
                          self.log(str(e.args[0]) + ".", True)
                          sys.exit()

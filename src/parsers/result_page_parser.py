@@ -20,13 +20,22 @@ class ResultPageParser():
             self.blocked = True
             return
         
+        div_total_results = self.soup.find(id="subform_ctrl")
+        
+        if div_total_results == None:
+            if self.soup.title.get_text() != "302 Moved":
+                print "Unknown page! Here's the html:\n"
+                print html + "\n"
+            self.blocked = True
+            return
+        
+        div_total_results = div_total_results.find_all("div")[1]
+        self.total_results = int(div_total_results.get_text().split(" ")[-2].replace(",", ""))        
+        
         links = self.soup.find(id="ires").find_all("h3", {"class" : "r"})
         
         for link in links:
             self.product_cids.append(link.find("a")["href"].split('cid=')[1])
-        
-        div_total_results = self.soup.find(id="subform_ctrl").find_all("div")[1]
-        self.total_results = int(div_total_results.get_text().split(" ")[-2].replace(",", ""))
         
     def get_product_cids(self):
         return self.product_cids
