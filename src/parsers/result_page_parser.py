@@ -13,7 +13,7 @@ class ResultPageParser():
         
     def feed(self, html):
         self.soup = BeautifulSoup(html)
-                
+        
         self.blocked = False
         
         if not self.soup.body:
@@ -35,17 +35,25 @@ class ResultPageParser():
             div_total_results = div_total_results.find_all("div")[1]
         else:
             div_total_results = div_total_results.find_all("div")[0]
-            
-        self.total_results = int(div_total_results.get_text().split(" ")[-2].replace(",", ""))        
+        
+        try:
+            self.total_results = int(div_total_results.get_text().split(" ")[-2].replace(",", ""))
+        except IndexError as e:
+            print "Unknown total results! Here's the div:\n"
+            print div_total_results.get_text() + "\n"
         
         links = self.soup.find(id="ires").find_all("h3", {"class" : "r"})
         
         for link in links:
             if (len(link.find("a")["href"].split('cid=')) > 1):
-                self.product_cids.append(link.find("a")["href"].split('cid=')[1])
+                cid = link.find("a")["href"].split('cid=')[1]
+                try:
+                    long(cid)
+                    self.product_cids.append(cid)
+                except ValueError:
+                    print("Invalid CID: " + cid)
             else:
-                print "Unknown link! Here's the link:\n"
-                print link.find("a")["href"]
+                print "Unknown product url: " + link.find("a")["href"]
         
     def get_product_cids(self):
         return self.product_cids
