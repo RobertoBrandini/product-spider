@@ -85,7 +85,6 @@ class PDataSpider:
                                 base64.decodestring('ZmFzdE1vdmluZzJCcmVha0V2ZXJ5dGhpbmc=') + "'" )
     
     def store_product_data(self, cid, info, offers, specs):
-        #try:
         conn = self.db_connect()
         cur = conn.cursor()
         
@@ -242,9 +241,6 @@ class PDataSpider:
         conn.commit()
         cur.close()
         conn.close()
-        #except Exception as e:
-        #    print "EXCEPTION"
-        #    import pdb; pdb.set_trace()
     
     def disable_product(self, cid):
         conn = self.db_connect()

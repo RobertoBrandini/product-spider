@@ -21,11 +21,11 @@ class ProductSpecsPageParser():
         
         self.blocked = False
         
-        if self.soup.body == None:
+        if not self.soup.body:
             self.blocked = True
             return
         
-        if self.soup.title.get_text() == "302 Moved":
+        if not self.soup.title or self.soup.title.get_text() == "302 Moved":
             self.blocked = True
             return
         

@@ -17,14 +17,14 @@ class ProductSellersPageParser():
         
         self.blocked = False
         
-        if self.soup.body == None:
+        if not self.soup.body:
             self.blocked = True
             return
         
         sellers_content_div = self.soup.find(id="ps-sellers-content")
         
         if sellers_content_div == None:
-            if self.soup.title.get_text() != "302 Moved":
+            if not self.soup.title or self.soup.title.get_text() != "302 Moved":
                 print "Unknown page! Here's the html:\n"
                 print html + "\n"
             self.blocked = True
