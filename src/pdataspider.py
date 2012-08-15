@@ -5,7 +5,6 @@ from user_exceptions.request_exception import RequestException
 from config import *
 from pytz import timezone
 import datetime
-import urllib
 import psycopg2
 import signal
 import sys
