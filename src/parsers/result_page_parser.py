@@ -23,9 +23,15 @@ class ResultPageParser():
         div_total_results = self.soup.find(id="subform_ctrl")
         
         if div_total_results == None:
-            if not self.soup.title or self.soup.title.get_text() != "302 Moved":
+            unknow = false
+            if self.soup.title:
+                if self.soup.title.get_text() != "302 Moved" and (self.soup.body.h1 and self.soup.body.h1.get_text() != "Server Error"):
+                    unknow = true
+            
+            if unknow:
                 print "Unknown page! Here's the html:\n"
                 print html + "\n"
+            
             self.blocked = True
             return
         
