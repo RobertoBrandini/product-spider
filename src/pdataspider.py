@@ -89,7 +89,7 @@ class PDataSpider:
         
         today = str(datetime.date.today())
         
-        cur.execute("UPDATE product SET dt_last_crawled = %s, bl_exists = true WHERE cid_product = %s AND ", (today, cid,))
+        cur.execute("UPDATE product SET dt_last_crawled = %s, bl_exists = true WHERE cid_product = %s", (today, cid,))
         
         cur.execute("SELECT * FROM product_info WHERE cid_product = %s", (cid,))        
         r = cur.fetchone()

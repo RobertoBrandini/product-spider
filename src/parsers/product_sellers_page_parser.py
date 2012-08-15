@@ -17,7 +17,7 @@ class ProductSellersPageParser():
         
         self.blocked = False
         
-        if not self.soup.body:
+        if not self.soup.title:
             self.blocked = True
             return
         
