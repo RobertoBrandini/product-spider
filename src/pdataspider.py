@@ -284,9 +284,9 @@ class PDataSpider:
         cur = conn.cursor()
         
         cur.execute('SELECT cid_product FROM product WHERE bl_exists = true ' + 
-                    'ORDER BY dt_last_crawled ASC, dt_collected DESC LIMIT %s', (self.crawl_limit,))
+                    'ORDER BY dt_last_crawled ASC NULLS FIRST, dt_collected DESC LIMIT %s', (self.crawl_limit,))
         
-        r = cur.fetchall()        
+        r = cur.fetchall()
         cur.close()
         conn.close()
         
