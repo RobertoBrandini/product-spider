@@ -89,7 +89,7 @@ class PDataSpider:
         
         today = str(datetime.date.today())
         
-        cur.execute("UPDATE product SET dt_last_crawled = %s WHERE cid_product = %s", (today, cid,))
+        cur.execute("UPDATE product SET dt_last_crawled = %s, bl_exists = true WHERE cid_product = %s AND ", (today, cid,))
         
         cur.execute("SELECT * FROM product_info WHERE cid_product = %s", (cid,))        
         r = cur.fetchone()
@@ -283,7 +283,7 @@ class PDataSpider:
         conn = self.db_connect()
         cur = conn.cursor()
         
-        cur.execute('SELECT cid_product FROM product WHERE bl_exists = true ' + 
+        cur.execute('SELECT cid_product FROM product ' + 
                     'ORDER BY dt_last_crawled ASC NULLS FIRST, dt_collected DESC LIMIT %s', (self.crawl_limit,))
         
         r = cur.fetchall()
