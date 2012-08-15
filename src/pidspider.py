@@ -72,7 +72,7 @@ class PIDSpider:
     def get_collected_cids(self):
         conn = pg.connect('itemcase', '50.116.1.34', 5432, None, None, 'postgres', 
                           base64.decodestring('ZmFzdE1vdmluZzJCcmVha0V2ZXJ5dGhpbmc='))
-        r = conn.query('SELECT cid_product, bl_exists FROM product').getresult()
+        r = conn.query('SELECT cid_product FROM product').getresult()
         conn.close()
         return r
     
@@ -146,14 +146,11 @@ class PIDSpider:
         for i in range(s_page, e_page + 1):
             r = self.crawl_page(self.query, i, s_price, e_price)
             for c in r.get_product_cids():
-                if not (c,'t') in self.collected:
-                    if (c, 'f') in self.collected:
-                        self.log('ATTENTION ==> The product #' + c + ' is enabled again.', True)
-                    else:
-                        self.collected.append((c, 't'))
-                        self.total_new_collected += 1
-                        self.log('CID #' + str(c) + " was collected.", False)
-                        conn.query('INSERT INTO product (cid_product, dt_collected, id_category) VALUES(' + c + ', \'' + str(datetime.date.today()) + '\', 328)')
+                if not (c,) in self.collected:
+                    self.collected.append((c,))
+                    self.total_new_collected += 1
+                    self.log('CID #' + str(c) + " was collected.", False)
+                    conn.query('INSERT INTO product (cid_product, dt_collected, id_category) VALUES(' + c + ', \'' + str(datetime.date.today()) + '\', 328)')
                     
         conn.close()
         
