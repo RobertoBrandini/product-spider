@@ -42,7 +42,6 @@ class PDataSpider:
                 product_info = product_main_page.get_product_basic_info()
                 crawled_products += 1
             else:
-                self.log("This product no longer exists on Google Product Search and has been disabled in the database.\n", False)
                 self.disable_product(cid[0])
                 disabled_products += 1
                 continue
@@ -163,7 +162,7 @@ class PDataSpider:
             
             insert_new_offer = False
             if r == None:
-                insert_new_offer = True            
+                insert_new_offer = True
             elif r[6] != offer_base_price or r[7] != offer_total_price or r[8] != offer["offer_condition"]:
                     closed_offers += 1
                     id_offer = r[0]
@@ -254,7 +253,7 @@ class PDataSpider:
             cur.execute("UPDATE offer SET dt_end = %s WHERE cid_product = %s", (today, cid,))
             cur.execute("UPDATE product_info SET dt_updated = %s WHERE cid_product = %s", (today, cid,))
         
-        cur.execute("UPDATE product SET bl_exists = false WHERE cid_product = %s", (cid,))
+        cur.execute("UPDATE product SET dt_last_crawled = %s, bl_exists = false WHERE cid_product = %s", (today, cid,))
         
         conn.commit()
         cur.close()
