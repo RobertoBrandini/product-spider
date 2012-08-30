@@ -145,6 +145,21 @@ class PDataSpider:
         
         ''' Sellers Page '''
         
+        cur.execute("SELECT of1.ds_domain_store FROM offer of1 WHERE of1.cid_product = %s " + 
+                    "AND EXISTS(SELECT of2.ds_domain_store FROM offer of2 WHERE of1.id_offer = of2.id_offer AND dt_end IS NULL LIMIT 1) " + 
+                    "GROUP BY of1.ds_domain_store", (cid,))
+        
+        db_alive_stores = cur.fetchall()
+        
+        current_alive_stores = []
+        for offer in offers: current_alive_stores.append(offer["seller_domain"])
+        
+        dead_stores = [item for item in db_alive_stores if item not in current_alive_stores]
+        
+        for dead_store in dead_stores:
+            cur.execute("UPDATE offer SET dt_end = %s WHERE cid_product = %s AND ds_domain_store = %s", (today, cid, dead_store,))
+            closed_offers += 1
+            
         for offer in offers:
             cur.execute("SELECT ds_domain FROM store WHERE ds_domain = %s", (offer["seller_domain"],))
             r = cur.fetchone()
