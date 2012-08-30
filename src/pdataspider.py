@@ -35,10 +35,10 @@ class PDataSpider:
         for cid in self.get_outdated_cids():
             self.log("Collecting data from product #" + cid[0] + ".", False)
             
-            # collection product basic information
+            # collecting product basic information
             product_main_page = self.crawl_page( "MAIN_PAGE", [cid[0]] )
             
-            if product_main_page.exists:                
+            if product_main_page.exists:
                 product_info = product_main_page.get_product_basic_info()
                 crawled_products += 1
             else:
@@ -49,12 +49,11 @@ class PDataSpider:
             # collecting product offers
             product_offers = []; page = 0; has_next_page = True
             
-            while has_next_page:                
+            while has_next_page:
                 r = self.crawl_page( "SELLERS_PAGE", [cid[0], page] )
-                page += 25
+                product_offers = product_offers + r.get_product_offers()
                 has_next_page = r.has_next_page
-                
-            product_offers = product_offers + r.get_product_offers()
+                page += 25
             
             # collecting product specifications
             product_specs = self.crawl_page( "SPECS_PAGE", [cid[0]] ).get_product_specs()
@@ -90,7 +89,9 @@ class PDataSpider:
         
         cur.execute("UPDATE product SET dt_last_crawled = %s, bl_exists = true WHERE cid_product = %s", (today, cid,))
         
-        cur.execute("SELECT * FROM product_info WHERE cid_product = %s", (cid,))        
+        ''' Main Page '''
+        
+        cur.execute("SELECT * FROM product_info WHERE cid_product = %s", (cid,))
         r = cur.fetchone()
         
         # if this product doesn't have a product_info table, insert a new table
@@ -142,6 +143,8 @@ class PDataSpider:
         new_offers = 0
         closed_offers = 0
         
+        ''' Sellers Page '''
+        
         for offer in offers:
             cur.execute("SELECT ds_domain FROM store WHERE ds_domain = %s", (offer["seller_domain"],))
             r = cur.fetchone()
@@ -192,6 +195,8 @@ class PDataSpider:
             
         if new_offers > 0:
             self.log(str(new_offers) + " new offers for this product were collected.", False)
+        
+        ''' Specs Page '''
         
         new_feature_groups = 0
         
