@@ -69,7 +69,7 @@ class ProductSellersPageParser():
             else:
                 has_page = False
                 if url != None:
-                    domain = url.replace("http://", "").replace("www.", "").split("/")[0]
+                    domain = url.replace("http://", "").replace("https://", "").replace("www.", "").split("/")[0]
                     domain_type = "url"
                 else:
                     domain = None

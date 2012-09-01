@@ -145,6 +145,7 @@ class PDataSpider:
         
         ''' Sellers Page '''
         
+        # getting the stores that are currently selling this product from the database
         cur.execute("SELECT of1.ds_domain_store FROM offer of1 WHERE of1.cid_product = %s " + 
                     "AND EXISTS(SELECT of2.ds_domain_store FROM offer of2 WHERE of1.id_offer = of2.id_offer AND dt_end IS NULL LIMIT 1) " + 
                     "GROUP BY of1.ds_domain_store", (cid,))
@@ -154,7 +155,8 @@ class PDataSpider:
         current_alive_stores = []
         for offer in offers: current_alive_stores.append(offer["seller_domain"])
         
-        dead_stores = [item for item in db_alive_stores if item not in current_alive_stores]
+        # dead_stores = db_alive_stores - current_alive_stores
+        dead_stores = [item for item in db_alive_stores if item[0] not in current_alive_stores]
         
         for dead_store in dead_stores:
             cur.execute("UPDATE offer SET dt_end = %s WHERE cid_product = %s AND ds_domain_store = %s", (today, cid, dead_store,))
@@ -169,23 +171,25 @@ class PDataSpider:
                                                                           0, offer["seller_domain_type"],))
                 new_stores += 1
                 
-            cur.execute("SELECT * FROM offer WHERE ds_url_offer = %s AND dt_end IS NULL", (offer["offer_url"],))
-            r = cur.fetchone()
-            
             if offer["offer_base_price"] == None: offer_base_price = None
             else: offer_base_price = float(offer["offer_base_price"])
                 
             if offer["offer_total_price"] == None: offer_total_price = None
             else: offer_total_price = float(offer["offer_total_price"])
+                
+            cur.execute("SELECT * FROM offer WHERE cid_product = %s AND ds_domain_store = %s AND dt_end IS NULL", (cid, offer["seller_domain"],))
+            r = cur.fetchone()
             
             insert_new_offer = False
             if r == None:
                 insert_new_offer = True
-            elif r[6] != offer_base_price or r[7] != offer_total_price or r[8] != offer["offer_condition"]:
+            elif r[6] != offer_base_price:
                     closed_offers += 1
                     id_offer = r[0]
-                    cur.execute("UPDATE offer SET dt_end = %s WHERE id_offer = %s", (today, id_offer,))                    
+                    cur.execute("UPDATE offer SET dt_end = %s WHERE id_offer = %s", (today, id_offer,))
                     insert_new_offer = True
+            elif r[7] != offer_total_price or r[8] != offer["offer_condition"]:
+                cur.execute("UPDATE offer SET nr_total_price = %s, ds_condition = %s WHERE id_offer = %s", (offer["offer_total_price"], offer["offer_condition"], id_offer,))
             
             if insert_new_offer:
                 cur.execute("INSERT INTO offer (id_offer, ds_domain_store, cid_product, ds_url_offer, dt_start, nr_base_price, " +
