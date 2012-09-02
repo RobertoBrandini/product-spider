@@ -163,6 +163,17 @@ class PDataSpider:
             closed_offers += 1
             
         for offer in offers:
+            if offer["seller_domain_type"] == "url":
+                cur.execute("SELECT ds_domain, ds_domain_type FROM store WHERE ds_name = %s AND ds_domain_type != 'url'", (offer["seller_name"],))
+                r = cur.fetchone()
+                
+                if r == None:
+                    if r[0] in ["savingsmall.com", "nextag.com", "rover.ebay.com", "sears.com", "clickfrom.buy.com", "vendio.com"]:
+                        continue
+                else:
+                    offer["seller_domain"] = r[0]
+                    offer["seller_domain_type"] = r[1]
+            
             cur.execute("SELECT ds_domain FROM store WHERE ds_domain = %s", (offer["seller_domain"],))
             r = cur.fetchone()
             
@@ -180,12 +191,13 @@ class PDataSpider:
             cur.execute("SELECT * FROM offer WHERE cid_product = %s AND ds_domain_store = %s AND dt_end IS NULL", (cid, offer["seller_domain"],))
             r = cur.fetchone()
             
+            id_offer = r[0]
+            
             insert_new_offer = False
             if r == None:
                 insert_new_offer = True
             elif r[6] != offer_base_price:
-                    closed_offers += 1
-                    id_offer = r[0]
+                    closed_offers += 1                    
                     cur.execute("UPDATE offer SET dt_end = %s WHERE id_offer = %s", (today, id_offer,))
                     insert_new_offer = True
             elif r[7] != offer_total_price or r[8] != offer["offer_condition"]:
