@@ -191,17 +191,17 @@ class PDataSpider:
             cur.execute("SELECT * FROM offer WHERE cid_product = %s AND ds_domain_store = %s AND dt_end IS NULL", (cid, offer["seller_domain"],))
             r = cur.fetchone()
             
-            id_offer = r[0]
-            
             insert_new_offer = False
             if r == None:
                 insert_new_offer = True
-            elif r[6] != offer_base_price:
+            else:
+                id_offer = r[0]
+                if r[6] != offer_base_price:
                     closed_offers += 1                    
                     cur.execute("UPDATE offer SET dt_end = %s WHERE id_offer = %s", (today, id_offer,))
                     insert_new_offer = True
-            elif r[7] != offer_total_price or r[8] != offer["offer_condition"]:
-                cur.execute("UPDATE offer SET nr_total_price = %s, ds_condition = %s WHERE id_offer = %s", (offer["offer_total_price"], offer["offer_condition"], id_offer,))
+                if r[7] != offer_total_price or r[8] != offer["offer_condition"]:
+                    cur.execute("UPDATE offer SET nr_total_price = %s, ds_condition = %s WHERE id_offer = %s", (offer["offer_total_price"], offer["offer_condition"], id_offer,))
             
             if insert_new_offer:
                 cur.execute("INSERT INTO offer (id_offer, ds_domain_store, cid_product, ds_url_offer, dt_start, nr_base_price, " +
